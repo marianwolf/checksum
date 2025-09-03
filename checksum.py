@@ -1,6 +1,8 @@
-import hashlib
+import hashlib, json, time
 
-def calculate_checksum(file_path, algorithm="sha256", block_size=12):
+algorithm="sha256"
+
+def calculate_checksum(file_path, block_size=12):
     try:
         hasher = hashlib.new(algorithm)
 
@@ -25,5 +27,20 @@ if __name__ == "__main__":
     checksum = calculate_checksum(file_to_check)
 
     if checksum:
-        print(f"The SHA-256 checksum of '{file_to_check}' is:")
-        print(checksum)
+        checksum_data = {
+            "time": time.time(),
+            "algorithm": algorithm,
+            "path": file_to_check,
+            "checksum": checksum
+        }
+
+        json_output = json.dumps(checksum_data, indent=4)
+
+        print(json_output)
+
+        try:
+            with open("checksum.json", "w") as json_file:
+                json_file.write(json_output)
+            print("Checksum successfully saved to 'checksum.json'")
+        except Exception as e:
+            print(f"An error occurred while writing to file: {e}")
