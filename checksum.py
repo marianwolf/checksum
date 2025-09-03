@@ -25,7 +25,7 @@ def calculate_checksum(file_path, block_size=12):
 
 if __name__ == "__main__":
     file_to_check = '/home/marian/Downloads/process_form.php'
-    checksum_file = "checksum.json"
+    checksum_file = "log.json"
     
     checksum = calculate_checksum(file_to_check)
 
