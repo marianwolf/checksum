@@ -49,11 +49,11 @@ if __name__ == "__main__":
                 except json.JSONDecodeError:
                     print("Existing file is empty or not a valid JSON. Starting with a new list.")
         
-        existing_data.append(new_checksum_data)
+        existing_data.insert(0, new_checksum_data)
 
         try:
             with open(checksum_file, "w") as json_file:
                 json.dump(existing_data, json_file, indent=4)
-            print(f"Checksum for '{file_to_check}' successfully appended to '{checksum_file}'.")
+            print(f"Checksum for '{file_to_check}' successfully prepended to '{checksum_file}'.")
         except Exception as e:
             print(f"An error occurred while writing to file: {e}")
