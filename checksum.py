@@ -24,7 +24,7 @@ def calculate_checksum(file_path, block_size=12):
         return None
 
 if __name__ == "__main__":
-    target_directory = '/dev'
+    target_directory = '/home'
     checksum_file = "log.json"
     existing_data = []
     if os.path.exists(checksum_file) and os.path.getsize(checksum_file) > 0:
