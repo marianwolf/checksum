@@ -20,11 +20,11 @@ def calculate_checksum(file_path, block_size=12):
         print(f"Error: The file '{file_path}' was not found.")
         return None
     except Exception as e:
-        print(f"An error occurred: {e}")
+        print(f"An error occurred with file '{file_path}': {e}")
         return None
 
 if __name__ == "__main__":
-    target_directory = '/home/marian/Downloads'
+    target_directory = '/dev'
     checksum_file = "log.json"
     existing_data = []
     if os.path.exists(checksum_file) and os.path.getsize(checksum_file) > 0:
@@ -42,6 +42,9 @@ if __name__ == "__main__":
         for file_name in files:
             file_to_check = os.path.join(root, file_name)
             
+            if not os.path.isfile(file_to_check):
+                continue
+
             print(f"Checking: {file_to_check}")
             checksum = calculate_checksum(file_to_check)
 
