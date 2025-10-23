@@ -24,7 +24,7 @@ def calculate_checksum(file_path, block_size=12):
         return None
 
 if __name__ == "__main__":
-    target_directory = '/home'
+    target_directory = '/home/marian/Downloads'
     checksum_file = "log.json"
     existing_data = []
     if os.path.exists(checksum_file) and os.path.getsize(checksum_file) > 0:
@@ -38,6 +38,12 @@ if __name__ == "__main__":
             except json.JSONDecodeError:
                 print("Existing file is empty or not a valid JSON. Starting with a new list.")
 
+    new_checksum_data = {
+        "timestamp": datetime.datetime.now().isoformat(timespec='milliseconds'),
+        "algorithm": algorithm,
+    }
+    existing_data.append(new_checksum_data)
+
     for root, _, files in os.walk(target_directory):
         for file_name in files:
             file_to_check = os.path.join(root, file_name)
@@ -50,12 +56,10 @@ if __name__ == "__main__":
 
             if checksum:
                 new_checksum_data = {
-                    "timestamp": datetime.datetime.now().isoformat(timespec='milliseconds'),
                     "path": file_to_check,
                     "checksum": checksum,
-                    "algorithm": algorithm,
                 }
-                existing_data.insert(0, new_checksum_data)
+                existing_data.append(new_checksum_data)
 
     try:
         with open(checksum_file, "w") as json_file:
