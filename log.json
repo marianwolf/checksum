@@ -1,158 +1,54 @@
-[
-    {
-        "timestamp": "2025-10-23T14:34:20.514",
-        "algorithm": "sha256"
-    },
-    {
-        "path": "/home/marian/Downloads/Saint-Sa\u00ebns C., Der Schwan.pdf",
-        "checksum": "47a2e3560d44502f9665760bc577c148c8da8cff50625d5930871f872fa0e377"
-    },
-    {
-        "path": "/home/marian/Downloads/Mozart L., Musette.pdf",
-        "checksum": "cdb1c5bf5544452bd2e18e39c83cfd79d093b154d69a318cc8bbdf9b66996d04"
-    },
-    {
-        "path": "/home/marian/Downloads/Basierend_auf_de.docx",
-        "checksum": "a23796773d904e3f8cdf22cb2ba473cde256ead450c7901c76f0dc6074dab4c4"
-    },
-    {
-        "path": "/home/marian/Downloads/Ultra-Lag-chosic.com_.mp3",
-        "checksum": "c5e0f5e5cbf08031f4cc49c3ef8447e50a2663130c0e778b2cd489abbfb2aee4"
-    },
-    {
-        "path": "/home/marian/Downloads/XWord R\u00e4tsel.svg",
-        "checksum": "9ac638aecac3c1c4a20c54f3e0be87306ab73d11bdd01ae7ec40325ce2702892"
-    },
-    {
-        "path": "/home/marian/Downloads/Adrenaline(chosic.com).mp3",
-        "checksum": "80032c7fdd1cc21de6dbf18916ad012e30025635c16d9341eca0da9d6607c633"
-    },
-    {
-        "path": "/home/marian/Downloads/Ausf_hrliches_Br.docx",
-        "checksum": "41bfaf08af78303c5df285c0ad5409eaeea8ac97b5407574959ed0861ef81df9"
-    },
-    {
-        "path": "/home/marian/Downloads/soundcloudaud.com_Kirbus.mp3",
-        "checksum": "59ad295516cd0759662124a908055f009546a4f365ca70cc9959838e0d0abf14"
-    },
-    {
-        "path": "/home/marian/Downloads/envato-music-gen.mp3",
-        "checksum": "b4d52b9d2f964f61d368470ed2cdabafb4c684e557dd12bce0a6feeddee05978"
-    },
-    {
-        "path": "/home/marian/Downloads/Maestro Chives, Egzod, Neoni - Royalty [NCS Release].mp3",
-        "checksum": "36f8c230eee35ea613b6414b60fd6a9fcb25f527c497e60a280b205d45fae077"
-    },
-    {
-        "path": "/home/marian/Downloads/Greensleeves.pdf",
-        "checksum": "c4d52762aa2ecc6786f7afc6bd849af59e56d2feeb24e1a1bc24bf9411bbc108"
-    },
-    {
-        "path": "/home/marian/Downloads/.mscbackup/.Unbenannte Partitur.mscz~",
-        "checksum": "d80dde47acf11b88286767374921e6560b76733c8d6d0f4ecec381cd39a4aac6"
-    },
-    {
-        "timestamp": "2025-10-23T14:34:38.408",
-        "algorithm": "sha256"
-    },
-    {
-        "path": "/home/marian/Downloads/Saint-Sa\u00ebns C., Der Schwan.pdf",
-        "checksum": "47a2e3560d44502f9665760bc577c148c8da8cff50625d5930871f872fa0e377"
-    },
-    {
-        "path": "/home/marian/Downloads/Mozart L., Musette.pdf",
-        "checksum": "cdb1c5bf5544452bd2e18e39c83cfd79d093b154d69a318cc8bbdf9b66996d04"
-    },
-    {
-        "path": "/home/marian/Downloads/Basierend_auf_de.docx",
-        "checksum": "a23796773d904e3f8cdf22cb2ba473cde256ead450c7901c76f0dc6074dab4c4"
-    },
-    {
-        "path": "/home/marian/Downloads/Ultra-Lag-chosic.com_.mp3",
-        "checksum": "c5e0f5e5cbf08031f4cc49c3ef8447e50a2663130c0e778b2cd489abbfb2aee4"
-    },
-    {
-        "path": "/home/marian/Downloads/XWord R\u00e4tsel.svg",
-        "checksum": "9ac638aecac3c1c4a20c54f3e0be87306ab73d11bdd01ae7ec40325ce2702892"
-    },
-    {
-        "path": "/home/marian/Downloads/Adrenaline(chosic.com).mp3",
-        "checksum": "80032c7fdd1cc21de6dbf18916ad012e30025635c16d9341eca0da9d6607c633"
-    },
-    {
-        "path": "/home/marian/Downloads/Ausf_hrliches_Br.docx",
-        "checksum": "41bfaf08af78303c5df285c0ad5409eaeea8ac97b5407574959ed0861ef81df9"
-    },
-    {
-        "path": "/home/marian/Downloads/soundcloudaud.com_Kirbus.mp3",
-        "checksum": "59ad295516cd0759662124a908055f009546a4f365ca70cc9959838e0d0abf14"
-    },
-    {
-        "path": "/home/marian/Downloads/envato-music-gen.mp3",
-        "checksum": "b4d52b9d2f964f61d368470ed2cdabafb4c684e557dd12bce0a6feeddee05978"
-    },
-    {
-        "path": "/home/marian/Downloads/Maestro Chives, Egzod, Neoni - Royalty [NCS Release].mp3",
-        "checksum": "36f8c230eee35ea613b6414b60fd6a9fcb25f527c497e60a280b205d45fae077"
-    },
-    {
-        "path": "/home/marian/Downloads/Greensleeves.pdf",
-        "checksum": "c4d52762aa2ecc6786f7afc6bd849af59e56d2feeb24e1a1bc24bf9411bbc108"
-    },
-    {
-        "path": "/home/marian/Downloads/.mscbackup/.Unbenannte Partitur.mscz~",
-        "checksum": "d80dde47acf11b88286767374921e6560b76733c8d6d0f4ecec381cd39a4aac6"
-    },
-    {
-        "timestamp": "2025-10-23T14:39:07.175",
-        "algorithm": "sha256"
-    },
-    {
-        "path": "/home/marian/Downloads/Saint-Sa\u00ebns C., Der Schwan.pdf",
-        "checksum": "47a2e3560d44502f9665760bc577c148c8da8cff50625d5930871f872fa0e377"
-    },
-    {
-        "path": "/home/marian/Downloads/Mozart L., Musette.pdf",
-        "checksum": "cdb1c5bf5544452bd2e18e39c83cfd79d093b154d69a318cc8bbdf9b66996d04"
-    },
-    {
-        "path": "/home/marian/Downloads/Basierend_auf_de.docx",
-        "checksum": "a23796773d904e3f8cdf22cb2ba473cde256ead450c7901c76f0dc6074dab4c4"
-    },
-    {
-        "path": "/home/marian/Downloads/Ultra-Lag-chosic.com_.mp3",
-        "checksum": "c5e0f5e5cbf08031f4cc49c3ef8447e50a2663130c0e778b2cd489abbfb2aee4"
-    },
-    {
-        "path": "/home/marian/Downloads/XWord R\u00e4tsel.svg",
-        "checksum": "9ac638aecac3c1c4a20c54f3e0be87306ab73d11bdd01ae7ec40325ce2702892"
-    },
-    {
-        "path": "/home/marian/Downloads/Adrenaline(chosic.com).mp3",
-        "checksum": "80032c7fdd1cc21de6dbf18916ad012e30025635c16d9341eca0da9d6607c633"
-    },
-    {
-        "path": "/home/marian/Downloads/Ausf_hrliches_Br.docx",
-        "checksum": "41bfaf08af78303c5df285c0ad5409eaeea8ac97b5407574959ed0861ef81df9"
-    },
-    {
-        "path": "/home/marian/Downloads/soundcloudaud.com_Kirbus.mp3",
-        "checksum": "59ad295516cd0759662124a908055f009546a4f365ca70cc9959838e0d0abf14"
-    },
-    {
-        "path": "/home/marian/Downloads/envato-music-gen.mp3",
-        "checksum": "b4d52b9d2f964f61d368470ed2cdabafb4c684e557dd12bce0a6feeddee05978"
-    },
-    {
-        "path": "/home/marian/Downloads/Maestro Chives, Egzod, Neoni - Royalty [NCS Release].mp3",
-        "checksum": "36f8c230eee35ea613b6414b60fd6a9fcb25f527c497e60a280b205d45fae077"
-    },
-    {
-        "path": "/home/marian/Downloads/Greensleeves.pdf",
-        "checksum": "c4d52762aa2ecc6786f7afc6bd849af59e56d2feeb24e1a1bc24bf9411bbc108"
-    },
-    {
-        "path": "/home/marian/Downloads/.mscbackup/.Unbenannte Partitur.mscz~",
-        "checksum": "d80dde47acf11b88286767374921e6560b76733c8d6d0f4ecec381cd39a4aac6"
-    }
-]
+{
+    "timestamp": "2025-10-23T14:51:08.227",
+    "algorithm": "sha256",
+    "files": [
+        {
+            "path": "/home/marian/Downloads/Saint-Sa\u00ebns C., Der Schwan.pdf",
+            "checksum": "47a2e3560d44502f9665760bc577c148c8da8cff50625d5930871f872fa0e377"
+        },
+        {
+            "path": "/home/marian/Downloads/Mozart L., Musette.pdf",
+            "checksum": "cdb1c5bf5544452bd2e18e39c83cfd79d093b154d69a318cc8bbdf9b66996d04"
+        },
+        {
+            "path": "/home/marian/Downloads/Basierend_auf_de.docx",
+            "checksum": "a23796773d904e3f8cdf22cb2ba473cde256ead450c7901c76f0dc6074dab4c4"
+        },
+        {
+            "path": "/home/marian/Downloads/Ultra-Lag-chosic.com_.mp3",
+            "checksum": "c5e0f5e5cbf08031f4cc49c3ef8447e50a2663130c0e778b2cd489abbfb2aee4"
+        },
+        {
+            "path": "/home/marian/Downloads/XWord R\u00e4tsel.svg",
+            "checksum": "9ac638aecac3c1c4a20c54f3e0be87306ab73d11bdd01ae7ec40325ce2702892"
+        },
+        {
+            "path": "/home/marian/Downloads/Adrenaline(chosic.com).mp3",
+            "checksum": "80032c7fdd1cc21de6dbf18916ad012e30025635c16d9341eca0da9d6607c633"
+        },
+        {
+            "path": "/home/marian/Downloads/Ausf_hrliches_Br.docx",
+            "checksum": "41bfaf08af78303c5df285c0ad5409eaeea8ac97b5407574959ed0861ef81df9"
+        },
+        {
+            "path": "/home/marian/Downloads/soundcloudaud.com_Kirbus.mp3",
+            "checksum": "59ad295516cd0759662124a908055f009546a4f365ca70cc9959838e0d0abf14"
+        },
+        {
+            "path": "/home/marian/Downloads/envato-music-gen.mp3",
+            "checksum": "b4d52b9d2f964f61d368470ed2cdabafb4c684e557dd12bce0a6feeddee05978"
+        },
+        {
+            "path": "/home/marian/Downloads/Maestro Chives, Egzod, Neoni - Royalty [NCS Release].mp3",
+            "checksum": "36f8c230eee35ea613b6414b60fd6a9fcb25f527c497e60a280b205d45fae077"
+        },
+        {
+            "path": "/home/marian/Downloads/Greensleeves.pdf",
+            "checksum": "c4d52762aa2ecc6786f7afc6bd849af59e56d2feeb24e1a1bc24bf9411bbc108"
+        },
+        {
+            "path": "/home/marian/Downloads/.mscbackup/.Unbenannte Partitur.mscz~",
+            "checksum": "d80dde47acf11b88286767374921e6560b76733c8d6d0f4ecec381cd39a4aac6"
+        }
+    ]
+}

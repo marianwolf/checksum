@@ -4,7 +4,7 @@ import os
 import datetime
 
 algorithm="sha256"
-def calculate_checksum(file_path, block_size=12):
+def calculate_checksum(file_path, block_size=65536):
     try:
         hasher = hashlib.new(algorithm)
 
@@ -26,23 +26,11 @@ def calculate_checksum(file_path, block_size=12):
 if __name__ == "__main__":
     target_directory = '/home/marian/Downloads'
     checksum_file = "log.json"
-    existing_data = []
-    if os.path.exists(checksum_file) and os.path.getsize(checksum_file) > 0:
-        with open(checksum_file, 'r') as f:
-            try:
-                data = json.load(f)
-                if isinstance(data, list):
-                    existing_data = data
-                elif isinstance(data, dict):
-                    existing_data.append(data)
-            except json.JSONDecodeError:
-                print("Existing file is empty or not a valid JSON. Starting with a new list.")
-
-    new_checksum_data = {
+    log_data = {
         "timestamp": datetime.datetime.now().isoformat(timespec='milliseconds'),
         "algorithm": algorithm,
+        "files": []
     }
-    existing_data.append(new_checksum_data)
 
     for root, _, files in os.walk(target_directory):
         for file_name in files:
@@ -55,15 +43,15 @@ if __name__ == "__main__":
             checksum = calculate_checksum(file_to_check)
 
             if checksum:
-                new_checksum_data = {
+                file_entry = {
                     "path": file_to_check,
                     "checksum": checksum,
                 }
-                existing_data.append(new_checksum_data)
+                log_data["files"].append(file_entry)
 
     try:
         with open(checksum_file, "w") as json_file:
-            json.dump(existing_data, json_file, indent=4)
+            json.dump(log_data, json_file, indent=4)
         print(f"All checksums successfully logged to '{checksum_file}'.")
     except Exception as e:
         print(f"An error occurred while writing to file: {e}")
