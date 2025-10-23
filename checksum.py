@@ -28,7 +28,7 @@ if __name__ == "__main__":
     target_directory = '/home/marian/Downloads'
     checksum_file = "log.json"
     log_data = {
-        "timestamp": datetime.datetime.now().isoformat(timespec='milliseconds'),
+        "timestamp": datetime.datetime.now().isoformat(timespec='milliseconds').replace('T', ''),
         "algorithm": algorithm,
         "block_size": block_size_default,
         "files": []
