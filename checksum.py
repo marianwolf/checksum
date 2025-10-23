@@ -4,7 +4,8 @@ import os
 import datetime
 
 algorithm="sha256"
-def calculate_checksum(file_path, block_size=65536):
+block_size_default=65536
+def calculate_checksum(file_path, block_size=block_size_default):
     try:
         hasher = hashlib.new(algorithm)
 
@@ -29,6 +30,7 @@ if __name__ == "__main__":
     log_data = {
         "timestamp": datetime.datetime.now().isoformat(timespec='milliseconds'),
         "algorithm": algorithm,
+        "block_size": block_size_default,
         "files": []
     }
 
@@ -49,9 +51,24 @@ if __name__ == "__main__":
                 }
                 log_data["files"].append(file_entry)
 
+    all_logs = []
+    try:
+        if os.path.exists(checksum_file):
+            with open(checksum_file, "r") as json_file:
+                all_logs = json.load(json_file)
+            if not isinstance(all_logs, list):
+                print(f"Warning: Log file '{checksum_file}' is not a list. Starting a new log.")
+                all_logs = []
+    except json.JSONDecodeError:
+        print(f"Warning: Could not read JSON from '{checksum_file}'. Starting a new log.")
+    except Exception as e:
+        print(f"An error occurred while reading file: {e}. Starting a new log.")
+
+    all_logs.append(log_data)
+
     try:
         with open(checksum_file, "w") as json_file:
-            json.dump(log_data, json_file, indent=4)
-        print(f"All checksums successfully logged to '{checksum_file}'.")
+            json.dump(all_logs, json_file, indent=4)
+        print(f"New log entry successfully appended to '{checksum_file}'.")
     except Exception as e:
         print(f"An error occurred while writing to file: {e}")

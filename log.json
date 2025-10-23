@@ -1,6 +1,7 @@
 {
-    "timestamp": "2025-10-23T14:51:08.227",
+    "timestamp": "2025-10-23T15:15:39.407",
     "algorithm": "sha256",
+    "block_size": 65536,
     "files": [
         {
             "path": "/home/marian/Downloads/Saint-Sa\u00ebns C., Der Schwan.pdf",
