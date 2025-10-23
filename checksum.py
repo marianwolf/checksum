@@ -25,12 +25,13 @@ def calculate_checksum(file_path, block_size=block_size_default):
         return None
 
 if __name__ == "__main__":
-    target_directory = '/home'
+    target_directory = '/home/marian/Downloads'
     checksum_file = "log.json"
     log_data = {
         "timestamp": datetime.datetime.now().isoformat(timespec='milliseconds').replace('T', ' '),
         "algorithm": algorithm,
         "block_size": block_size_default,
+        "folder": target_directory,
         "files": []
     }
 
@@ -41,7 +42,6 @@ if __name__ == "__main__":
             if not os.path.isfile(file_to_check):
                 continue
 
-            print(f"Checking: {file_to_check}")
             checksum = calculate_checksum(file_to_check)
 
             if checksum:
