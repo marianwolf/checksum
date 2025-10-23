@@ -18,14 +18,14 @@ def calculate_checksum(file_path, block_size=block_size_default):
 
         return hasher.hexdigest()
     except FileNotFoundError:
-        print(f"Error: The file '{file_path}' was not found.")
+        print(f"Error: '{file_path}' was not found.")
         return None
     except Exception as e:
-        print(f"An error occurred with file '{file_path}': {e}")
+        print(f"ERROR: {e}")
         return None
 
 if __name__ == "__main__":
-    target_directory = '/home/marian/Downloads'
+    target_directory = '/home'
     checksum_file = "log.json"
     log_data = {
         "timestamp": datetime.datetime.now().isoformat(timespec='milliseconds').replace('T', ' '),
@@ -57,12 +57,12 @@ if __name__ == "__main__":
             with open(checksum_file, "r") as json_file:
                 all_logs = json.load(json_file)
             if not isinstance(all_logs, list):
-                print(f"Warning: Log file '{checksum_file}' is not a list. Starting a new log.")
+                print(f"WARNING: '{checksum_file}' is not a list. Starting a new log.")
                 all_logs = []
     except json.JSONDecodeError:
-        print(f"Warning: Could not read JSON from '{checksum_file}'. Starting a new log.")
+        print(f"WARNING: Could not read JSON from '{checksum_file}'. Starting a new log.")
     except Exception as e:
-        print(f"An error occurred while reading file: {e}. Starting a new log.")
+        print(f"ERROR READING: {e}. Starting a new log.")
 
     all_logs.append(log_data)
 
@@ -71,4 +71,4 @@ if __name__ == "__main__":
             json.dump(all_logs, json_file, indent=4)
         print(f"New log entry successfully appended to '{checksum_file}'.")
     except Exception as e:
-        print(f"An error occurred while writing to file: {e}")
+        print(f"ERROR WRITING: {e}")
