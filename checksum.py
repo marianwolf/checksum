@@ -30,7 +30,6 @@ def calculate_checksum(file_path, block_size=BLOCK_SIZE_DEFAULT):
         return None
 
 def read_log(log_path):
-    """Reads the existing log file, handling errors and non-list structures."""
     all_logs = []
     if log_path.exists():
         try:
@@ -46,7 +45,6 @@ def read_log(log_path):
     return all_logs
 
 def write_log(log_path, all_logs):
-    """Writes the updated log data to the file."""
     try:
         with open(log_path, "w") as json_file:
             json.dump(all_logs, json_file, indent=4)
@@ -56,18 +54,16 @@ def write_log(log_path, all_logs):
 
 if __name__ == "__main__":
     while True:
-        target_input = input(f"Bitte geben Sie den Pfad zum Zielverzeichnis ein (z.B. /home/marian/Downloads): ")
+        target_input = input(f"Please enter the path: ")
         TARGET_DIRECTORY = pathlib.Path(target_input)
         
         if not TARGET_DIRECTORY.is_dir():
-            print(f"Error: Das Zielverzeichnis '{TARGET_DIRECTORY}' existiert nicht oder ist kein Verzeichnis.")
+            print(f"ERROR: The target directory '{TARGET_DIRECTORY}' does not exist or is not a directory.")
         else:
             break
-
-    print(f"Starte Checksum-Berechnung für: {TARGET_DIRECTORY.resolve()}")
     
     log_data = {
-        "timestamp": datetime.datetime.now().isoformat(timespec='milliseconds'),
+        "timestamp": datetime.datetime.now().isoformat(timespec='milliseconds').replace('T', ' '),
         "algorithm": ALGORITHM,
         "block_size": BLOCK_SIZE_DEFAULT,
         "folder": str(TARGET_DIRECTORY.resolve()),
