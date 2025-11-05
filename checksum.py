@@ -2,73 +2,86 @@ import hashlib
 import json
 import os
 import datetime
+import pathlib
+import sys
 
-algorithm="sha256"
-block_size_default=65536
-def calculate_checksum(file_path, block_size=block_size_default):
+ALGORITHM = "sha256"
+BLOCK_SIZE_DEFAULT = 65536
+TARGET_DIRECTORY = pathlib.Path('/home/marian/Downloads')
+CHECKSUM_FILE = pathlib.Path("log.json")
+
+def calculate_checksum(file_path, block_size=BLOCK_SIZE_DEFAULT):
+    """Calculates the checksum of a file using the specified algorithm."""
     try:
-        hasher = hashlib.new(algorithm)
+        hasher = hashlib.new(ALGORITHM)
 
         with open(file_path, 'rb') as f:
-            while True:
-                data = f.read(block_size)
-                if not data:
-                    break
+            while data := f.read(block_size):
                 hasher.update(data)
 
         return hasher.hexdigest()
     except FileNotFoundError:
-        print(f"Error: '{file_path}' was not found.")
+        print(f"Error: '{file_path}' was not found.", file=sys.stderr)
+        return None
+    except PermissionError:
+        print(f"Error: Permission denied for '{file_path}'. Skipping.", file=sys.stderr)
         return None
     except Exception as e:
-        print(f"ERROR: {e}")
+        print(f"ERROR: An unexpected error occurred with '{file_path}': {e}", file=sys.stderr)
         return None
 
+def read_log(log_path):
+    """Reads the existing log file, handling errors and non-list structures."""
+    all_logs = []
+    if log_path.exists():
+        try:
+            with open(log_path, "r") as json_file:
+                all_logs = json.load(json_file)
+            if not isinstance(all_logs, list):
+                print(f"WARNING: '{log_path}' is not a list. Starting a new log.")
+                all_logs = []
+        except json.JSONDecodeError:
+            print(f"WARNING: Could not read JSON from '{log_path}'. Starting a new log.")
+        except Exception as e:
+            print(f"ERROR READING: {e}. Starting a new log.")
+    return all_logs
+
+def write_log(log_path, all_logs):
+    """Writes the updated log data to the file."""
+    try:
+        with open(log_path, "w") as json_file:
+            json.dump(all_logs, json_file, indent=4)
+        print(f"New log entry successfully appended to '{log_path}'.")
+    except Exception as e:
+        print(f"ERROR WRITING: {e}", file=sys.stderr)
+
 if __name__ == "__main__":
-    target_directory = '/home/Downloads'
-    checksum_file = "log.json"
+    if not TARGET_DIRECTORY.is_dir():
+        print(f"Error: Target directory '{TARGET_DIRECTORY}' does not exist or is not a directory.")
+        sys.exit(1)
+
     log_data = {
-        "timestamp": datetime.datetime.now().isoformat(timespec='milliseconds').replace('T', ' '),
-        "algorithm": algorithm,
-        "block_size": block_size_default,
-        "folder": target_directory,
+        "timestamp": datetime.datetime.now().isoformat(timespec='milliseconds'),
+        "algorithm": ALGORITHM,
+        "block_size": BLOCK_SIZE_DEFAULT,
+        "folder": str(TARGET_DIRECTORY.resolve()),
         "files": []
     }
 
-    for root, _, files in os.walk(target_directory):
-        for file_name in files:
-            file_to_check = os.path.join(root, file_name)
+    for file_to_check in TARGET_DIRECTORY.rglob('*'):
+        
+        if not file_to_check.is_file():
+            continue
+
+        checksum = calculate_checksum(file_to_check)
+
+        if checksum:
+            file_entry = {
+                "path": str(file_to_check.relative_to(TARGET_DIRECTORY.parent)),
+                "checksum": checksum,
+            }
+            log_data["files"].append(file_entry)
             
-            if not os.path.isfile(file_to_check):
-                continue
-
-            checksum = calculate_checksum(file_to_check)
-
-            if checksum:
-                file_entry = {
-                    "path": file_to_check,
-                    "checksum": checksum,
-                }
-                log_data["files"].append(file_entry)
-
-    all_logs = []
-    try:
-        if os.path.exists(checksum_file):
-            with open(checksum_file, "r") as json_file:
-                all_logs = json.load(json_file)
-            if not isinstance(all_logs, list):
-                print(f"WARNING: '{checksum_file}' is not a list. Starting a new log.")
-                all_logs = []
-    except json.JSONDecodeError:
-        print(f"WARNING: Could not read JSON from '{checksum_file}'. Starting a new log.")
-    except Exception as e:
-        print(f"ERROR READING: {e}. Starting a new log.")
-
+    all_logs = read_log(CHECKSUM_FILE)
     all_logs.append(log_data)
-
-    try:
-        with open(checksum_file, "w") as json_file:
-            json.dump(all_logs, json_file, indent=4)
-        print(f"New log entry successfully appended to '{checksum_file}'.")
-    except Exception as e:
-        print(f"ERROR WRITING: {e}")
+    write_log(CHECKSUM_FILE, all_logs)
