@@ -4,6 +4,7 @@ import os
 import datetime
 import pathlib
 import sys
+from collections import defaultdict 
 
 ALGORITHM = "sha256"
 BLOCK_SIZE_DEFAULT = 65536
@@ -31,7 +32,7 @@ def read_log(log_path):
     all_logs = []
     if log_path.exists():
         try:
-            with open(log_path, "r") as json_file:
+            with open(log_path, "r", encoding="utf-8") as json_file:
                 all_logs = json.load(json_file)
             if not isinstance(all_logs, list):
                 print(f"WARNING: '{log_path}' is not a list. Starting a new log.")
@@ -99,7 +100,7 @@ if __name__ == "__main__":
         else:
             break
     
-    directory_map = {} 
+    directory_map = defaultdict(list) 
     
     print(f"Starting checksum calculation for: {TARGET_DIRECTORY.resolve()}")
 
@@ -114,10 +115,6 @@ if __name__ == "__main__":
             file_relative_path = file_to_check.relative_to(TARGET_DIRECTORY)
             directory_path = str(file_relative_path.parent)
             file_name = file_relative_path.name
-
-            if directory_path not in directory_map:
-                directory_map[directory_path] = []
-            
             file_entry = {
                 "name": file_name,
                 "checksum": checksum,
