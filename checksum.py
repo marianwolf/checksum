@@ -13,11 +13,9 @@ def calculate_checksum(file_path, block_size=BLOCK_SIZE_DEFAULT):
     """Calculates the checksum of a file using the specified algorithm."""
     try:
         hasher = hashlib.new(ALGORITHM)
-
         with open(file_path, 'rb') as f:
             while data := f.read(block_size):
                 hasher.update(data)
-
         return hasher.hexdigest()
     except FileNotFoundError:
         print(f"Error: '{file_path}' was not found.", file=sys.stderr)
@@ -46,11 +44,50 @@ def read_log(log_path):
 
 def write_log(log_path, all_logs):
     try:
-        with open(log_path, "w") as json_file:
-            json.dump(all_logs, json_file, indent=4)
+        with open(log_path, "w", encoding="utf-8") as json_file:
+            json.dump(all_logs, json_file, indent=4, ensure_ascii=False)
         print(f"New log entry successfully appended to '{log_path}'.")
     except Exception as e:
         print(f"ERROR WRITING: {e}", file=sys.stderr)
+
+def build_directory_tree(directory_map):
+    root_node = {
+        "files": directory_map.get('.', []),
+        "children": {} 
+    }
+    
+    children_map = {".": root_node}
+    sorted_paths = sorted(directory_map.keys(), key=len)
+    
+    for full_path in sorted_paths:
+        if full_path == '.':
+            continue
+
+        path_parts = full_path.split(os.sep)
+        node_name = path_parts[-1]
+        parent_path = str(pathlib.Path(full_path).parent)
+        new_node = {
+            "name": node_name,
+            "files": directory_map.get(full_path, []),
+            "children": {} 
+        }
+        
+        children_map[full_path] = new_node
+        
+        if parent_path in children_map:
+            children_map[parent_path]["children"][node_name] = new_node
+        else:
+            print(f"WARNING: Could not find parent for path: {full_path}")
+
+    final_tree = root_node
+    
+    def dict_to_list(node):
+        node['subdirectories'] = sorted(list(node.pop('children').values()), key=lambda x: x['name'])
+        for child in node['subdirectories']:
+            dict_to_list(child)
+
+    dict_to_list(final_tree)
+    return final_tree
 
 if __name__ == "__main__":
     while True:
@@ -62,13 +99,9 @@ if __name__ == "__main__":
         else:
             break
     
-    log_data = {
-        "timestamp": datetime.datetime.now().isoformat(timespec='milliseconds').replace('T', ' '),
-        "algorithm": ALGORITHM,
-        "block_size": BLOCK_SIZE_DEFAULT,
-        "folder": str(TARGET_DIRECTORY.resolve()),
-        "files": []
-    }
+    directory_map = {} 
+    
+    print(f"Starting checksum calculation for: {TARGET_DIRECTORY.resolve()}")
 
     for file_to_check in TARGET_DIRECTORY.rglob('*'):
         
@@ -78,11 +111,28 @@ if __name__ == "__main__":
         checksum = calculate_checksum(file_to_check)
 
         if checksum:
+            file_relative_path = file_to_check.relative_to(TARGET_DIRECTORY)
+            directory_path = str(file_relative_path.parent)
+            file_name = file_relative_path.name
+
+            if directory_path not in directory_map:
+                directory_map[directory_path] = []
+            
             file_entry = {
-                "path": str(file_to_check.relative_to(TARGET_DIRECTORY)), 
+                "name": file_name,
                 "checksum": checksum,
             }
-            log_data["files"].append(file_entry)
+            directory_map[directory_path].append(file_entry)
+
+    directory_tree = build_directory_tree(directory_map)
+    
+    log_data = {
+        "timestamp": datetime.datetime.now().isoformat(timespec='milliseconds').replace('T', ' '),
+        "algorithm": ALGORITHM,
+        "block_size": BLOCK_SIZE_DEFAULT,
+        "folder": str(TARGET_DIRECTORY.resolve()),
+        "structure": directory_tree
+    }
             
     all_logs = read_log(CHECKSUM_FILE)
     all_logs.append(log_data)
