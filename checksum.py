@@ -7,7 +7,6 @@ import sys
 
 ALGORITHM = "sha256"
 BLOCK_SIZE_DEFAULT = 65536
-TARGET_DIRECTORY = pathlib.Path('/home/marian/Downloads')
 CHECKSUM_FILE = pathlib.Path("log.json")
 
 def calculate_checksum(file_path, block_size=BLOCK_SIZE_DEFAULT):
@@ -56,10 +55,17 @@ def write_log(log_path, all_logs):
         print(f"ERROR WRITING: {e}", file=sys.stderr)
 
 if __name__ == "__main__":
-    if not TARGET_DIRECTORY.is_dir():
-        print(f"Error: Target directory '{TARGET_DIRECTORY}' does not exist or is not a directory.")
-        sys.exit(1)
+    while True:
+        target_input = input(f"Bitte geben Sie den Pfad zum Zielverzeichnis ein (z.B. /home/marian/Downloads): ")
+        TARGET_DIRECTORY = pathlib.Path(target_input)
+        
+        if not TARGET_DIRECTORY.is_dir():
+            print(f"Error: Das Zielverzeichnis '{TARGET_DIRECTORY}' existiert nicht oder ist kein Verzeichnis.")
+        else:
+            break
 
+    print(f"Starte Checksum-Berechnung für: {TARGET_DIRECTORY.resolve()}")
+    
     log_data = {
         "timestamp": datetime.datetime.now().isoformat(timespec='milliseconds'),
         "algorithm": ALGORITHM,
@@ -77,7 +83,7 @@ if __name__ == "__main__":
 
         if checksum:
             file_entry = {
-                "path": str(file_to_check.relative_to(TARGET_DIRECTORY.parent)),
+                "path": str(file_to_check.relative_to(TARGET_DIRECTORY)), 
                 "checksum": checksum,
             }
             log_data["files"].append(file_entry)
