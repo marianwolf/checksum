@@ -25,7 +25,7 @@ def calculate_checksum(file_path, block_size=block_size_default):
         return None
 
 if __name__ == "__main__":
-    target_directory = '/home/marian/Downloads'
+    target_directory = '/home/Downloads'
     checksum_file = "log.json"
     log_data = {
         "timestamp": datetime.datetime.now().isoformat(timespec='milliseconds').replace('T', ' '),
