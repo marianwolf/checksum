@@ -187,16 +187,18 @@ def validate_audio_file(filepath: str) -> Tuple[Optional[str], Optional[str]]:
     return None, "Fehler: Unbekannter Fehler bei der Validierung."
 
 
-def bytes_to_png_data(audio_data: bytes) -> Tuple[bytes, Tuple[int, int]]:
+def bytes_to_png_data(audio_data: bytes, color: bool = False) -> Tuple[bytes, Tuple[int, int]]:
     """
     Konvertiert Binärdaten in PNG-Bilddaten.
     
-    Die Binärdaten werden in ein Graustufen-Bild kodiert, wobei jedes Pixel
-    einen Byte-Wert (0-255) repräsentiert. Die Breite wird auf 1024 Pixel
-    beschränkt, um PNG-Kompatibilität zu gewährleisten.
+    Die Binärdaten werden in ein Bild kodiert. Bei Graustufen (Standard)
+    repräsentiert jedes Pixel einen Byte-Wert (0-255). Bei RGB-Farbe werden
+    3 Bytes pro Pixel kodiert (R, G, B), was Speicherplatz spart.
     
     Args:
         audio_data: Binärdaten der Audiodatei
+        color: Wenn True, wird RGB-Farbmodus verwendet (3 Bytes/Pixel)
+               Wenn False, wird Graustufen verwendet (1 Byte/Pixel)
         
     Returns:
         Tuple aus (PNG-Bilddaten, (Breite, Höhe))
@@ -205,50 +207,92 @@ def bytes_to_png_data(audio_data: bytes) -> Tuple[bytes, Tuple[int, int]]:
     length = len(audio_data)
     checksum = zlib.crc32(audio_data) & 0xFFFFFFFF
     
-    # Header mit Längencode: [Länge (8 Bytes)][Prüfsumme (4 Bytes)][Daten...]
-    header = struct.pack('<Q', length) + struct.pack('<I', checksum)
+    # Header mit Längencode: [Länge (8 Bytes)][Prüfsumme (4 Bytes)][Farbmodus (1 Byte)][Daten...]
+    header = struct.pack('<Q', length) + struct.pack('<I', checksum) + struct.pack('B', 1 if color else 0)
     data_with_header = header + audio_data
     
     # Maximale Bildbreite
     max_width = 1024
     
-    # Berechne Bilddimensionen
-    total_pixels = len(data_with_header)
-    width = min(max_width, total_pixels)
-    height = (total_pixels + width - 1) // width  # Aufrunden
-    
-    # Erstelle Bild-Pixel-Daten (Graustufen)
-    pixels = bytearray(width * height)
-    pixels[:len(data_with_header)] = data_with_header
-    
-    # PNG-Header erstellen (8-byte PNG signature)
-    png_signature = b'\x89PNG\r\n\x1a\n'
-    
-    # IHDR-Chunk (Bildinformationen)
-    ihdr_data = struct.pack('>IIBBBBB', width, height, 8, 0, 0, 0, 0)
-    ihdr_crc = zlib.crc32(b'IHDR' + ihdr_data) & 0xFFFFFFFF
-    ihdr_chunk = struct.pack('>I', 13) + b'IHDR' + ihdr_data + struct.pack('>I', ihdr_crc)
-    
-    # IDAT-Chunk (Bilddaten - komprimiert)
-    # Filtertype 0 (None) für jede Zeile
-    raw_data = b''
-    for row in range(height):
-        row_start = row * width
-        row_end = min(row_start + width, len(pixels))
-        filter_byte = b'\x00'  # Filter Type: None
-        row_data = bytes(pixels[row_start:row_end])
-        raw_data += filter_byte + row_data
-    
-    compressed_data = zlib.compress(raw_data, 9)
-    idat_crc = zlib.crc32(b'IDAT' + compressed_data) & 0xFFFFFFFF
-    idat_chunk = struct.pack('>I', len(compressed_data)) + b'IDAT' + compressed_data + struct.pack('>I', idat_crc)
-    
-    # IEND-Chunk (Ende der PNG-Datei)
-    iend_crc = zlib.crc32(b'IEND') & 0xFFFFFFFF
-    iend_chunk = struct.pack('>I', 0) + b'IEND' + struct.pack('>I', iend_crc)
-    
-    # Zusammenfügen aller Chunks
-    png_data = png_signature + ihdr_chunk + idat_chunk + iend_chunk
+    if color:
+        # RGB-Modus: 3 Bytes pro Pixel
+        bytes_per_pixel = 3
+        # Berechne Anzahl benötigter Pixel
+        total_pixels = (len(data_with_header) + bytes_per_pixel - 1) // bytes_per_pixel
+        width = min(max_width, total_pixels)
+        height = (total_pixels + width - 1) // width
+        
+        # Erstelle Bild-Pixel-Daten (RGB)
+        pixels = bytearray(width * height * bytes_per_pixel)
+        pixels[:len(data_with_header)] = data_with_header
+        
+        # PNG-Header erstellen (8-byte PNG signature)
+        png_signature = b'\x89PNG\r\n\x1a\n'
+        
+        # IHDR-Chunk (Bildinformationen - RGB: Color Type 2)
+        ihdr_data = struct.pack('>IIBBBBB', width, height, 8, 2, 0, 0, 0)
+        ihdr_crc = zlib.crc32(b'IHDR' + ihdr_data) & 0xFFFFFFFF
+        ihdr_chunk = struct.pack('>I', 13) + b'IHDR' + ihdr_data + struct.pack('>I', ihdr_crc)
+        
+        # IDAT-Chunk (Bilddaten - komprimiert)
+        # Filtertype 0 (None) für jede Zeile
+        raw_data = b''
+        for row in range(height):
+            row_start = row * width * bytes_per_pixel
+            row_end = min(row_start + width * bytes_per_pixel, len(pixels))
+            filter_byte = b'\x00'  # Filter Type: None
+            row_data = bytes(pixels[row_start:row_end])
+            raw_data += filter_byte + row_data
+        
+        compressed_data = zlib.compress(raw_data, 9)
+        idat_crc = zlib.crc32(b'IDAT' + compressed_data) & 0xFFFFFFFF
+        idat_chunk = struct.pack('>I', len(compressed_data)) + b'IDAT' + compressed_data + struct.pack('>I', idat_crc)
+        
+        # IEND-Chunk (Ende der PNG-Datei)
+        iend_crc = zlib.crc32(b'IEND') & 0xFFFFFFFF
+        iend_chunk = struct.pack('>I', 0) + b'IEND' + struct.pack('>I', iend_crc)
+        
+        # Zusammenfügen aller Chunks
+        png_data = png_signature + ihdr_chunk + idat_chunk + iend_chunk
+        
+    else:
+        # Graustufen-Modus: 1 Byte pro Pixel (Original-Verhalten)
+        total_pixels = len(data_with_header)
+        width = min(max_width, total_pixels)
+        height = (total_pixels + width - 1) // width
+        
+        # Erstelle Bild-Pixel-Daten (Graustufen)
+        pixels = bytearray(width * height)
+        pixels[:len(data_with_header)] = data_with_header
+        
+        # PNG-Header erstellen (8-byte PNG signature)
+        png_signature = b'\x89PNG\r\n\x1a\n'
+        
+        # IHDR-Chunk (Bildinformationen)
+        ihdr_data = struct.pack('>IIBBBBB', width, height, 8, 0, 0, 0, 0)
+        ihdr_crc = zlib.crc32(b'IHDR' + ihdr_data) & 0xFFFFFFFF
+        ihdr_chunk = struct.pack('>I', 13) + b'IHDR' + ihdr_data + struct.pack('>I', ihdr_crc)
+        
+        # IDAT-Chunk (Bilddaten - komprimiert)
+        # Filtertype 0 (None) für jede Zeile
+        raw_data = b''
+        for row in range(height):
+            row_start = row * width
+            row_end = min(row_start + width, len(pixels))
+            filter_byte = b'\x00'  # Filter Type: None
+            row_data = bytes(pixels[row_start:row_end])
+            raw_data += filter_byte + row_data
+        
+        compressed_data = zlib.compress(raw_data, 9)
+        idat_crc = zlib.crc32(b'IDAT' + compressed_data) & 0xFFFFFFFF
+        idat_chunk = struct.pack('>I', len(compressed_data)) + b'IDAT' + compressed_data + struct.pack('>I', idat_crc)
+        
+        # IEND-Chunk (Ende der PNG-Datei)
+        iend_crc = zlib.crc32(b'IEND') & 0xFFFFFFFF
+        iend_chunk = struct.pack('>I', 0) + b'IEND' + struct.pack('>I', iend_crc)
+        
+        # Zusammenfügen aller Chunks
+        png_data = png_signature + ihdr_chunk + idat_chunk + iend_chunk
     
     return png_data, (width, height)
 
@@ -278,26 +322,47 @@ def png_data_to_bytes(png_data: bytes) -> bytes:
         reader = png.Reader(bytes=png_data)
         width, height, pixels, info = reader.read_flat()
         
+        # Prüfe Farbtyp
+        color_type = info.get('greyscale', True) if info.get('greyscale') is not None else True
+        
+        if 'alpha' in info and info['alpha']:
+            bytes_per_pixel = 2 if color_type else 4
+        else:
+            bytes_per_pixel = 1 if color_type else 3
+        
         # Konvertiere in Byte-Array
         pixel_data = bytes(pixels)
         
         # Entferne Filter-Bytes (jede Zeile beginnt mit einem Filter-Byte)
         data = bytearray()
-        row_size = width
+        row_size = width * bytes_per_pixel
         for i in range(height):
             row_start = i * (row_size + 1)
             # Lese nur bis zum Ende der Zeile
             row_end = min(row_start + 1 + row_size, len(pixel_data))
-            data.extend(pixel_data[row_start + 1:row_end])
+            row = pixel_data[row_start + 1:row_end]
+            
+            # Bei RGB/RGBA: Extrahiere nur jeden 3./4. Byte für Graustufen-Kompatibilität
+            if not color_type:
+                # Konvertiere RGB/RGBA zu einem kontinuierlichen Byte-Stream
+                for j in range(width):
+                    if bytes_per_pixel == 3:
+                        data.append(row[j * 3])     # Nur Rot-Kanal
+                    else:  # bytes_per_pixel == 4
+                        data.append(row[j * 4])     # Nur Rot-Kanal (igno  Alpha)
+            else:
+                data.extend(row)
         
-        # Extrahiere Header mit Längencode
-        if len(data) < 12:
+        # Extrahiere Header mit Längencode und Farbmodus
+        if len(data) < 13:
             raise ValueError("Daten sind zu kurz für Header")
         
         length = struct.unpack('<Q', data[:8])[0]
         checksum = struct.unpack('<I', data[8:12])[0]
+        color_mode = data[12]  # 0 = Graustufen, 1 = RGB
+        
         # Schneide auf die erwartete Länge zu
-        audio_data = data[12:12+length]
+        audio_data = data[13:13+length]
         
         # Prüfe Länge
         if len(audio_data) != length:
@@ -348,9 +413,7 @@ def manual_png_decode(png_data: bytes) -> bytes:
             compressed_data = png_data[pos+8:pos+8+chunk_length]
             raw_data = zlib.decompress(compressed_data)
             
-            # Entferne Filter-Bytes
-            data = bytearray()
-            row_size = width
+            # Bestimme Bytes pro Pixel basierend auf Color Type
             if color_type == 0:  # Grayscale
                 bytes_per_pixel = 1
             elif color_type == 2:  # RGB
@@ -362,33 +425,36 @@ def manual_png_decode(png_data: bytes) -> bytes:
             else:
                 bytes_per_pixel = 1
             
-            expected_row_size = row_size * bytes_per_pixel
+            expected_row_size = width * bytes_per_pixel
             
+            # Entferne Filter-Bytes und konvertiere zu kontinuierlichem Byte-Stream
+            data = bytearray()
             for i in range(height):
                 row_start = i * (expected_row_size + 1)
                 row_data = raw_data[row_start+1:row_start+1+expected_row_size]
                 
-                # Konvertiere zu Graustufen wenn nötig
-                if color_type == 2 or color_type == 6:
-                    # RGB/RGBA -> Graustufen
-                    grayscale_row = bytearray()
-                    for j in range(row_size):
+                # Extrahiere nur den ersten Kanal (R bei RGB, Grauwert bei Grayscale)
+                for j in range(width):
+                    if color_type == 2 or color_type == 6:
+                        # RGB/RGBA -> Extrahiere nur jeden 3./4. Byte
                         if color_type == 2:
-                            grayscale_row.append(row_data[j*3])
-                        else:
-                            grayscale_row.append(row_data[j*4])
-                    data.extend(grayscale_row)
-                else:
-                    data.extend(row_data)
+                            data.append(row_data[j * 3])     # R-Kanal
+                        else:  # RGBA
+                            data.append(row_data[j * 4])     # R-Kanal
+                    else:
+                        # Grayscale -> direkt übernehmen
+                        data.append(row_data[j])
             
-            # Extrahiere Header mit Längencode
-            if len(data) < 12:
+            # Extrahiere Header mit Längencode und Farbmodus
+            if len(data) < 13:
                 raise ValueError("Daten sind zu kurz für Header")
             
             length = struct.unpack('<Q', data[:8])[0]
             checksum = struct.unpack('<I', data[8:12])[0]
+            color_mode = data[12]  # 0 = Graustufen, 1 = RGB
+            
             # Schneide auf die erwartete Länge zu
-            audio_data = data[12:12+length]
+            audio_data = data[13:13+length]
             
             # Prüfe Länge
             if len(audio_data) != length:
@@ -409,14 +475,16 @@ def manual_png_decode(png_data: bytes) -> bytes:
     raise ValueError("IDAT-Chunk nicht gefunden")
 
 
-def convert_audio_to_png(input_path: str, output_path: Optional[str] = None, verbose: bool = False) -> bool:
+def convert_audio_to_png(input_path: str, output_path: Optional[str] = None, verbose: bool = False, color: bool = False) -> bool:
     """
     Konvertiert eine Audiodatei (MP3/WAV) in ein PNG-Bild.
     
     Args:
         input_path: Pfad zur Eingabe-Audiodatei
         output_path: Pfad zur Ausgabe-PNG-Datei (optional, auto-generiert wenn None)
-        verbose:Verbose Ausgabe aktivieren
+        verbose: Verbose Ausgabe aktivieren
+        color: Wenn True, wird RGB-Farbmodus verwendet (3 Bytes/Pixel)
+               Wenn False, wird Graustufen verwendet (1 Byte/Pixel)
         
     Returns:
         True bei Erfolg, False bei Fehler
@@ -432,6 +500,7 @@ def convert_audio_to_png(input_path: str, output_path: Optional[str] = None, ver
     
     assert file_type is not None, "file_type sollte nach erfolgreicher Validierung nicht None sein"
     print(f"Dateityp erkannt: {file_type.upper()}")
+    print(f"Farbmodus: {'RGB (farbig)' if color else 'Graustufen'}")
     
     # Dateigröße anzeigen
     file_size = os.path.getsize(input_path)
@@ -450,17 +519,27 @@ def convert_audio_to_png(input_path: str, output_path: Optional[str] = None, ver
     # Generiere Ausgabepfad wenn nicht angegeben
     if output_path is None:
         base_name = os.path.splitext(input_path)[0]
-        output_path = f"{base_name}.png"
+        suffix = '_color' if color else ''
+        output_path = f"{base_name}{suffix}.png"
     
     print(f"Ausgabedatei: {output_path}")
     
     # Konvertiere zu PNG
     print("Konvertiere Binärdaten zu PNG...")
-    png_data, dimensions = bytes_to_png_data(audio_data)
+    png_data, dimensions = bytes_to_png_data(audio_data, color=color)
     width, height = dimensions
     
-    print(f"Bilddimensionen: {width} x {height} Pixel")
+    # Berechne erwartete Pixel-Anzahl und Größenvergleich
+    header = struct.pack('<Q', len(audio_data)) + struct.pack('<I', zlib.crc32(audio_data) & 0xFFFFFFFF) + struct.pack('B', 1 if color else 0)
+    data_with_header = header + audio_data
+    expected_pixels = (len(data_with_header) + (3 if color else 1) - 1) // (3 if color else 1)
+    grayscale_pixels = len(data_with_header)
+    
+    print(f"Bilddimensionen: {width} x {height} Pixel ({expected_pixels:,} Pixel)")
     print(f"PNG-Größe: {len(png_data):,} Bytes")
+    
+    if color:
+        print(f"Platzersparnis: ~{66}% weniger Pixel gegenüber Graustufen")
     
     # Schreibe PNG-Datei
     try:
@@ -542,8 +621,9 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog='''
 Beispiele:
-  %(prog)s audio.mp3                    # Konvertiert MP3 zu PNG
+  %(prog)s audio.mp3                    # Konvertiert MP3 zu PNG (Graustufen)
   %(prog)s audio.wav output.png        # Konvertiert WAV zu PNG mit Ausgabename
+  %(prog)s --color audio.mp3            # Konvertiert MP3 zu farbigem PNG (RGB)
   %(prog)s --reverse audio.png         # Rekonstruiert Audio aus PNG
   %(prog)s -r audio.png audio_rec.mp3  # Rekonstruiert Audio mit Ausgabename
 '''
@@ -553,6 +633,8 @@ Beispiele:
     parser.add_argument('output', nargs='?', help='Ausgabedatei (optional)')
     parser.add_argument('-r', '--reverse', action='store_true',
                         help='Konvertiert PNG zurück zu Audio')
+    parser.add_argument('-c', '--color', action='store_true',
+                        help='Verwendet RGB-Farbmodus (3 Bytes/Pixel, speichert ~66%% Platz)')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='Verbose Ausgabe')
     
@@ -565,7 +647,7 @@ Beispiele:
     if args.reverse:
         return 0 if convert_png_to_audio(args.input, args.output, args.verbose) else 1
     else:
-        return 0 if convert_audio_to_png(args.input, args.output, args.verbose) else 1
+        return 0 if convert_audio_to_png(args.input, args.output, args.verbose, args.color) else 1
 
 
 if __name__ == '__main__':
