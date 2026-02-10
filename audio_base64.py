@@ -187,12 +187,11 @@ def validate_audio_file(filepath: str) -> Tuple[Optional[str], Optional[str]]:
     return None, "Fehler: Unbekannter Fehler bei der Validierung."
 
 
-def apply_delta_encoding(data: bytes) -> bytes:
+def apply_delta_encoding_optimized(data: bytes) -> bytes:
     """
-    Wendet Delta-Kodierung auf Binärdaten an.
+    Optimierte Delta-Kodierung mit Wraparound für Byte-Werte.
     
-    Ersetzt jeden Byte durch die Differenz zum vorherigen Byte.
-    Dies reduziert die Datenredundanz bei aufeinanderfolgenden ähnlichen Werten.
+    Verwendet modulare Arithmetik für konsistente Byte-Werte 0-255.
     
     Args:
         data: Binärdaten
@@ -205,13 +204,15 @@ def apply_delta_encoding(data: bytes) -> bytes:
     
     result = bytearray([data[0]])
     for i in range(1, len(data)):
-        result.append(data[i] - data[i-1])
+        # Modular-Subtraktion für konsistente Byte-Werte
+        diff = (data[i] - data[i-1]) & 0xFF
+        result.append(diff)
     return bytes(result)
 
 
 def apply_delta_decoding(data: bytes) -> bytes:
     """
-    Kehrt die Delta-Kodierung um.
+    Kehrt die Delta-Kodierung um mit modularer Arithmetik.
     
     Args:
         data: Delta-kodierte Binärdaten
@@ -224,7 +225,8 @@ def apply_delta_decoding(data: bytes) -> bytes:
     
     result = bytearray([data[0]])
     for i in range(1, len(data)):
-        result.append(result[i-1] + data[i])
+        # Modular-Addition für konsistente Byte-Werte
+        result.append((result[i-1] + data[i]) & 0xFF)
     return bytes(result)
 
 
@@ -376,7 +378,8 @@ def compress_with_best_algorithm(data: bytes, file_type: str) -> tuple:
     return best_data, best_type
 
 
-def bytes_to_png_data(audio_data: bytes, color: bool = False, file_type: str = 'mp3') -> Tuple[bytes, Tuple[int, int]]:
+def bytes_to_png_data(audio_data: bytes, color: bool = False, file_type: str = 'mp3', 
+                       use_rgb_interleaved: bool = True) -> Tuple[bytes, Tuple[int, int]]:
     """
     Konvertiert Binärdaten in PNG-Bilddaten mit optimierter Komprimierung.
     
@@ -387,6 +390,7 @@ def bytes_to_png_data(audio_data: bytes, color: bool = False, file_type: str = '
     Optimierungen:
     - WAV: Delta-Kodierung + brotli/zstd Kompression
     - MP3: Keine Kompression (bereits komprimiert)
+    - RGB Interleaved: Kodiert RGB-Daten als separate Kanäle für bessere Kompression
     - Adaptives PNG-Filter-System pro Zeile
     
     Args:
@@ -394,13 +398,15 @@ def bytes_to_png_data(audio_data: bytes, color: bool = False, file_type: str = '
         color: Wenn True, wird RGB-Farbmodus verwendet (3 Bytes/Pixel)
                Wenn False, wird Graustufen verwendet (1 Byte/Pixel)
         file_type: Dateityp ('mp3' oder 'wav') für optimale Komprimierung
+        use_rgb_interleaved: Wenn True (Standard), werden RGB-Kanäle separat kodiert
+                            für bessere PNG-Filter-Effizienz
         
     Returns:
         Tuple aus (PNG-Bilddaten, (Breite, Höhe))
     """
     # Delta-Kodierung nur für WAV (unkomprimiertes PCM)
     if file_type == 'wav':
-        audio_data = apply_delta_encoding(audio_data)
+        audio_data = apply_delta_encoding_optimized(audio_data)
     
     # Komprimiere die Audiodaten (brotli/zstd für WAV, keine für MP3)
     compressed_audio, compression_type = compress_with_best_algorithm(audio_data, file_type)
@@ -410,8 +416,8 @@ def bytes_to_png_data(audio_data: bytes, color: bool = False, file_type: str = '
     original_length = len(audio_data)
     checksum = zlib.crc32(audio_data) & 0xFFFFFFFF
     
-    # Header mit Längencode: [Länge (8 Bytes)][Prüfsumme (4 Bytes)][Farbmodus (1 Byte)][Komprimierung (1 Byte)][Daten...]
-    header = struct.pack('<Q', original_length) + struct.pack('<I', checksum) + struct.pack('B', 1 if color else 0) + struct.pack('B', compression_type)
+    # Header mit Längencode: [Länge (8 Bytes)][Prüfsumme (4 Bytes)][Farbmodus (1 Byte)][Komprimierung (1 Byte)][RGB-Modus (1 Byte)][Daten...]
+    header = struct.pack('<Q', original_length) + struct.pack('<I', checksum) + struct.pack('B', 1 if color else 0) + struct.pack('B', compression_type) + struct.pack('B', 1 if use_rgb_interleaved else 0)
     data_with_header = header + compressed_audio
     
     # Maximale Bildbreite
@@ -420,47 +426,88 @@ def bytes_to_png_data(audio_data: bytes, color: bool = False, file_type: str = '
     if color:
         # RGB-Modus: 3 Bytes pro Pixel
         bytes_per_pixel = 3
-        # Berechne Anzahl benötigter Pixel
-        total_pixels = (len(data_with_header) + bytes_per_pixel - 1) // bytes_per_pixel
-        width = min(max_width, total_pixels)
-        height = (total_pixels + width - 1) // width
         
-        # Erstelle Bild-Pixel-Daten (RGB)
-        pixels = bytearray(width * height * bytes_per_pixel)
-        pixels[:len(data_with_header)] = data_with_header
-        
-        # PNG-Header erstellen (8-byte PNG signature)
-        png_signature = b'\x89PNG\r\n\x1a\n'
-        
-        # IHDR-Chunk (Bildinformationen - RGB: Color Type 2)
-        ihdr_data = struct.pack('>IIBBBBB', width, height, 8, 2, 0, 0, 0)
-        ihdr_crc = zlib.crc32(b'IHDR' + ihdr_data) & 0xFFFFFFFF
-        ihdr_chunk = struct.pack('>I', 13) + b'IHDR' + ihdr_data + struct.pack('>I', ihdr_crc)
-        
-        # Adaptives Filter-System für jede Zeile
-        raw_data = b''
-        prev_row = b''
-        
-        for row in range(height):
-            row_start = row * width * bytes_per_pixel
-            row_end = min(row_start + width * bytes_per_pixel, len(pixels))
-            row_data = bytes(pixels[row_start:row_end])
+        if use_rgb_interleaved:
+            # Optimiertes RGB-Interleaving: Kodiere jeden Kanal separat als "Zeilen"
+            # Dies nutzt die PNG-Filter effektiver, da jeder Kanal sequenzielle Daten hat
+            data_len = len(data_with_header)
+            # Berechne wie viele Pixel pro Kanal nötig sind
+            pixels_per_channel = (data_len + bytes_per_pixel - 1) // bytes_per_pixel
             
-            # Adaptiven Filter wählen
-            _, _, filtered_row = find_best_filter(row_data, prev_row, lambda d: zlib.compress(d, 9))
-            raw_data += filtered_row
-            prev_row = row_data
+            # Teile Daten in separate Kanäle auf
+            r_channel = bytearray(pixels_per_channel)
+            g_channel = bytearray(pixels_per_channel)
+            b_channel = bytearray(pixels_per_channel)
+            
+            for i in range(data_len):
+                channel = i % 3
+                if channel == 0:
+                    r_channel[i // 3] = data_with_header[i]
+                elif channel == 1:
+                    g_channel[i // 3] = data_with_header[i]
+                else:
+                    b_channel[i // 3] = data_with_header[i]
+            
+            # RGB als drei separate "Zeilen" kodieren (R, G, B)
+            width = pixels_per_channel
+            height = 3  # Drei Kanäle als Zeilen
+            
+            # PNG-Header erstellen
+            png_signature = b'\x89PNG\r\n\x1a\n'
+            ihdr_data = struct.pack('>IIBBBBB', width, height, 8, 0, 0, 0, 0)  # Graustufen für effiziente Filterung
+            ihdr_crc = zlib.crc32(b'IHDR' + ihdr_data) & 0xFFFFFFFF
+            ihdr_chunk = struct.pack('>I', 13) + b'IHDR' + ihdr_data + struct.pack('>I', ihdr_crc)
+            
+            # Jeden Kanal mit optimalem Filter kodieren
+            raw_data = b''
+            channels = [bytes(r_channel), bytes(g_channel), bytes(b_channel)]
+            prev_row = b''
+            
+            for channel_data in channels:
+                if len(channel_data) < width:
+                    channel_data = channel_data + b'\x00' * (width - len(channel_data))
+                _, _, filtered_row = find_best_filter(channel_data[:width], prev_row, lambda d: zlib.compress(d, 9))
+                raw_data += filtered_row
+                prev_row = channel_data[:width]
+        else:
+            # Standard RGB: Alle Kanäle in einem Pixel
+            total_pixels = (len(data_with_header) + bytes_per_pixel - 1) // bytes_per_pixel
+            width = min(max_width, total_pixels)
+            height = (total_pixels + width - 1) // width
+            
+            # Erstelle Bild-Pixel-Daten (RGB)
+            pixels = bytearray(width * height * bytes_per_pixel)
+            pixels[:len(data_with_header)] = data_with_header
+            
+            # PNG-Header erstellen
+            png_signature = b'\x89PNG\r\n\x1a\n'
+            ihdr_data = struct.pack('>IIBBBBB', width, height, 8, 2, 0, 0, 0)  # RGB Color Type 2
+            ihdr_crc = zlib.crc32(b'IHDR' + ihdr_data) & 0xFFFFFFFF
+            ihdr_chunk = struct.pack('>I', 13) + b'IHDR' + ihdr_data + struct.pack('>I', ihdr_crc)
+            
+            # Adaptives Filter-System für jede Zeile
+            raw_data = b''
+            prev_row = b''
+            
+            for row in range(height):
+                row_start = row * width * bytes_per_pixel
+                row_end = min(row_start + width * bytes_per_pixel, len(pixels))
+                row_data = bytes(pixels[row_start:row_end])
+                
+                # Adaptiven Filter wählen
+                _, _, filtered_row = find_best_filter(row_data, prev_row, lambda d: zlib.compress(d, 9))
+                raw_data += filtered_row
+                prev_row = row_data
         
         # Komprimiere die Rohdaten
         compressed_data = zlib.compress(raw_data, 9)
         idat_crc = zlib.crc32(b'IDAT' + compressed_data) & 0xFFFFFFFF
         idat_chunk = struct.pack('>I', len(compressed_data)) + b'IDAT' + compressed_data + struct.pack('>I', idat_crc)
         
-        # IEND-Chunk (Ende der PNG-Datei)
+        # IEND-Chunk
         iend_crc = zlib.crc32(b'IEND') & 0xFFFFFFFF
         iend_chunk = struct.pack('>I', 0) + b'IEND' + struct.pack('>I', iend_crc)
         
-        # Zusammenfügen aller Chunks
         png_data = png_signature + ihdr_chunk + idat_chunk + iend_chunk
         
     else:
@@ -473,15 +520,13 @@ def bytes_to_png_data(audio_data: bytes, color: bool = False, file_type: str = '
         pixels = bytearray(width * height)
         pixels[:len(data_with_header)] = data_with_header
         
-        # PNG-Header erstellen (8-byte PNG signature)
+        # PNG-Header erstellen
         png_signature = b'\x89PNG\r\n\x1a\n'
-        
-        # IHDR-Chunk (Bildinformationen)
         ihdr_data = struct.pack('>IIBBBBB', width, height, 8, 0, 0, 0, 0)
         ihdr_crc = zlib.crc32(b'IHDR' + ihdr_data) & 0xFFFFFFFF
         ihdr_chunk = struct.pack('>I', 13) + b'IHDR' + ihdr_data + struct.pack('>I', ihdr_crc)
         
-        # Adaptives Filter-System für jede Zeile
+        # Adaptives Filter-System
         raw_data = b''
         prev_row = b''
         
@@ -490,21 +535,17 @@ def bytes_to_png_data(audio_data: bytes, color: bool = False, file_type: str = '
             row_end = min(row_start + width, len(pixels))
             row_data = bytes(pixels[row_start:row_end])
             
-            # Adaptiven Filter wählen
             _, _, filtered_row = find_best_filter(row_data, prev_row, lambda d: zlib.compress(d, 9))
             raw_data += filtered_row
             prev_row = row_data
         
-        # Komprimiere die Rohdaten
         compressed_data = zlib.compress(raw_data, 9)
         idat_crc = zlib.crc32(b'IDAT' + compressed_data) & 0xFFFFFFFF
         idat_chunk = struct.pack('>I', len(compressed_data)) + b'IDAT' + compressed_data + struct.pack('>I', idat_crc)
         
-        # IEND-Chunk (Ende der PNG-Datei)
         iend_crc = zlib.crc32(b'IEND') & 0xFFFFFFFF
         iend_chunk = struct.pack('>I', 0) + b'IEND' + struct.pack('>I', iend_crc)
         
-        # Zusammenfügen aller Chunks
         png_data = png_signature + ihdr_chunk + idat_chunk + iend_chunk
     
     return png_data, (width, height)
@@ -567,16 +608,17 @@ def png_data_to_bytes(png_data: bytes) -> bytes:
                 data.extend(row)
         
         # Extrahiere Header mit Längencode, Farbmodus und Komprimierungstyp
-        if len(data) < 14:
+        if len(data) < 15:
             raise ValueError("Daten sind zu kurz für Header")
         
         length = struct.unpack('<Q', data[:8])[0]
         checksum = struct.unpack('<I', data[8:12])[0]
         color_mode = data[12]  # 0 = Graustufen, 1 = RGB
         compression_type = data[13]  # 0=zlib, 1=brotli, 2=zstd, 255=none
+        rgb_interleaved = data[14]  # 1 = RGB Interleaved aktiviert
         
         # Schneide auf die erwartete Länge zu
-        compressed_audio = data[14:14+length]
+        compressed_audio = data[15:15+length]
         
         # Dekomprimiere basierend auf Komprimierungstyp
         if compression_type == 255:  # Keine Kompression (MP3)
@@ -589,7 +631,7 @@ def png_data_to_bytes(png_data: bytes) -> bytes:
         else:  # zlib oder unbekannt
             audio_data = zlib.decompress(compressed_audio)
         
-        # Delta-Dekodierung falls angewendet
+        # Delta-Dekodierung falls angewendet (nur für WAV)
         if len(audio_data) > length:
             audio_data = apply_delta_decoding(audio_data)
         
@@ -677,16 +719,17 @@ def manual_png_decode(png_data: bytes) -> bytes:
                         data.append(row_data[j])
             
             # Extrahiere Header mit Längencode, Farbmodus und Komprimierungstyp
-            if len(data) < 14:
+            if len(data) < 15:
                 raise ValueError("Daten sind zu kurz für Header")
             
             length = struct.unpack('<Q', data[:8])[0]
             checksum = struct.unpack('<I', data[8:12])[0]
             color_mode = data[12]  # 0 = Graustufen, 1 = RGB
             compression_type = data[13]  # 0=zlib, 1=brotli, 2=zstd, 255=none
+            rgb_interleaved = data[14]  # 1 = RGB Interleaved aktiviert
             
             # Schneide auf die erwartete Länge zu
-            compressed_audio = data[14:14+length]
+            compressed_audio = data[15:15+length]
             
             # Dekomprimiere basierend auf Komprimierungstyp
             if compression_type == 255:  # Keine Kompression (MP3)
@@ -699,14 +742,8 @@ def manual_png_decode(png_data: bytes) -> bytes:
             else:  # zlib oder unbekannt
                 audio_data = zlib.decompress(compressed_audio)
             
-            # Delta-Dekodierung für WAV (unkomprimiertes PCM)
-            # Wir können nicht wissen, ob es WAV war, aber die Delta-Dekodierung
-            # ist verlustfrei, also schadet sie nicht für MP3 (die keine Delta-Kodierung hatten)
-            # Tatsächlich müssen wir wissen, ob Delta-Kodierung verwendet wurde
-            # Da wir die ursprüngliche Länge kennen, prüfen wir ob die dekomprimierten Daten
-            # länger sind als erwartet (dann wurde Delta-Kodierung verwendet)
+            # Delta-Dekodierung falls angewendet
             if len(audio_data) > length:
-                # Delta-Kodierung wurde angewendet
                 audio_data = apply_delta_decoding(audio_data)
             
             # Auf erwartete Länge zuschneiden
